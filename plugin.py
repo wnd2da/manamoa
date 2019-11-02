@@ -35,12 +35,12 @@ def plugin_unload():
     Logic.plugin_unload()
 
 plugin_info = {
-    'version' : '0.1.2.0',
+    'version' : '0.1.2.1',
     'name' : 'Manamoa 다운로더 2',
     'category_name' : 'service',
     'icon' : '',
-    'developer' : 'noname',
-    'description' : '마나모아 다운로드<br>임시',
+    'developer' : 'soju6jan',
+    'description' : '마나모아 다운로드<br>원작자 :noname님',
     'home' : 'https://github.com/soju6jan/manamoa_sjva',
     'more' : '',
 }
