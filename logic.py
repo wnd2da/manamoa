@@ -159,12 +159,6 @@ class Logic(object):
     @staticmethod
     def scheduler_function():
         try:
-            #from ManamoaDownloader import LogicMD
-            #setting_list = db.session.query(ModelSetting).all()
-            #arg = Util.db_list_to_dict(setting_list)
-            #arg['downlist'] = arg['downlist'].split('|')
-            #LogicMD.init(arg, Logic.listener)
-            #LogicMD.start()
             from logic_manamoa import LogicMD
             LogicMD.start()
         except Exception as e:
@@ -217,9 +211,6 @@ class Logic(object):
     @staticmethod
     def download_by_request(req):
         try:
-            from ManamoaDownloader import LogicMD
-            logger.debug(req.form)
-            #LogicMD.current_manga_id = req.form['manga_id']
             manga_id = req.form['manga_id']
             manga_id = None if manga_id == '' else manga_id
             wr_id = req.form['wr_id']
@@ -229,7 +220,6 @@ class Logic(object):
             else:
                 LogicQueue.add_queue_episode(None, wr_id, False, None)
             return True
-            #return Logic.one_execute()
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
