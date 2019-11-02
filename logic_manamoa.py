@@ -40,10 +40,10 @@ try:
     from PIL import Image
 except:
     requirements = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'requirements.txt')
-    if os.system('%s -m pip install -r %s' % (python, requirements)) != 0:
+    if os.system('python -m pip install -r %s' % (requirements)) != 0:
         os.system('wget https://bootstrap.pypa.io/get-pip.py')
-        os.system('%s get-pip.py' % python)
-        os.system('%s -m pip install -r %s' % (python, requirements))
+        os.system('python get-pip.py' % python)
+        os.system('python -m pip install -r %s' % (requirements))
 
 import requests
 from bs4 import BeautifulSoup
