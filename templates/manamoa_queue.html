@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div>
+  {{ macros.m_button_group([['reset_queue_btn', '초기화'], ['completed_remove_btn', '완료된 항목 삭제'], ['all_show_btn', '모두 확장'], ['all_hide_btn', '모두 축소']])}}
+  {{ macros.m_row_start('0') }}
+  {{ macros.m_row_end() }}
+
+  {{ macros.m_hr_head_top() }}
+  {{ macros.m_row_start('5') }}
+  {{ macros.m_col(5,  macros.m_strong('Tiele')) }}
+  {{ macros.m_col(1,  macros.m_strong('Downlist')) }}
+  {{ macros.m_col(1,  macros.m_strong('Already')) }}
+  {{ macros.m_col(3,  macros.m_strong('Percent')) }}
+  {{ macros.m_col(2,  macros.m_strong('Action')) }}
+  {{ macros.m_row_end() }}
+  {{ macros.m_hr_head_bottom() }}
+  <div id="queue_list_div"></div>
+</div> <!--전체-->
+
+
+<script type="text/javascript">
+var package_name = 'manamoa';
+var current_data = null;
+
+$(document).ready(function(){
+  var protocol = window.location.protocol;
+  socket = io.connect(protocol + "//" + document.domain + ":" + location.port + "/" + package_name);
+
+  socket.on('queue_list', function(data){
+    on_queue_list(data);
+  });
+
+  socket.on('queue_one', function(data){
+    str = make_queue_one(data)
+    document.getElementById("queue_"+data.index+'_div').innerHTML = str;
+  });
+
+  socket.on('episode', function(data){
+    if ($('#toggle_'+data.queue_index+'_div').hasClass('collapse show') == false) {
+      $('#toggle_' + data.queue_index + '_div').collapse('show')
+    }
+    str = make_episode(data)
+    document.getElementById("episode_"+data.queue_index + '_' + data.index+'_div').innerHTML = str;
+  });
+});
+
+function on_queue_list(data) {
+  current_data = data
+  make_queue_list(data)
+}
+
+function make_queue_list(data) {
+  str = '';
+  for (i in data) {
+    str += '<div id="queue_'+data[i].index+'_div">'
+    str += make_queue_one(data[i])
+    str += '</div>' //one
+    if (i != data.length -1) str += m_hr(0);
+  }
+  document.getElementById("queue_list_div").innerHTML = str;
+}
+
+function make_queue_one(data) {
+  str = m_row_start();
+  if (data.manga_id != null) {
+    tmp = '전체'
+    tmp2 = data.manga_id
+  } else {
+    tmp = '에피소드'
+    tmp2 = data.wr_id
+  }
+  str += m_col(1, tmp)
+  str += m_col(6, (data.title==null)?'--':data.title)
+  str += m_col(2, tmp2)
+  str += m_col(1, data.episodes.length)
+  str += m_col(1, data.status)
+  tmp = m_button('toggle_btn', 'Toggle', [{'key':'index', 'value':data.index}]);
+  str += m_col(1, tmp)
+  str += m_row_end();
+  str += '<div id="toggle_'+data.index+'_div" class="collapse">'
+  for (j in data.episodes) {
+    str += '<div id="episode_'+data.index+'_'+data.episodes[j].index+'_div">'
+    str += make_episode(data.episodes[j])
+    str += '</div>'
+  }
+  str += '</div>' //epi
+  return str
+}
+
+function make_episode(data) {
+  str = m_row_start(2);
+  str += m_col(1, '')
+  str += m_col(6, (data.title==null)?'--':data.title)
+  percent = data.current_image_index * 100 / (data.total_image_count - 1)
+  percent = parseInt(percent)
+
+  if (percent != 0)
+    label = (data.current_image_index+1) + ' / ' + data.total_image_count + " (" + percent + "%)"
+  else 
+    label = '--'
+  tmp = m_progress('progress_'+data.index+'_'+data.index, percent,  label)
+  str += m_col(3, tmp)
+  str += m_col(2, data.status)
+  str += m_row_end();
+  return str
+}
+
+$("body").on('click', '#toggle_btn', function(e){
+  e.preventDefault();
+  index = $(this).data("index")
+  if ($('#toggle_'+index+'_div').hasClass('collapse show') == false) {
+    $('#toggle_' + index + '_div').collapse('show')
+  } else {
+    $('#toggle_' + index + '_div').collapse('hide')
+  }
+});
+
+$("body").on('click', '#completed_remove_btn', function(e){
+  e.preventDefault();
+  $.ajax({
+    url: '/' + package_name + '/ajax/completed_remove',
+    type: "POST",
+    cache: false,
+    data: {},
+    dataType: "json",
+    success: function (ret) {}
+  });
+});
+
+$("body").on('click', '#reset_queue_btn', function(e){
+  e.preventDefault();
+  $.ajax({
+    url: '/' + package_name + '/ajax/reset_queue',
+    type: "POST",
+    cache: false,
+    data: {},
+    dataType: "json",
+    success: function (ret) {
+    }
+  });
+});
+
+$("body").on('click', '#all_show_btn', function(e){
+  e.preventDefault();
+  $("div[id^='toggle_']").collapse('show')
+});
+
+$("body").on('click', '#all_hide_btn', function(e){
+  e.preventDefault();
+  $("div[id^='toggle_']").collapse('hide')
+});
+</script>
+{% endblock %}
