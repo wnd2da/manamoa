@@ -239,13 +239,18 @@ class LogicMD(object):
             mangascore = soup.find('span','count').text.replace('인기 : ','')
             title = soup.title.text
             queue_entity_episode.title = LogicMD.titlereplace(title)
-            match = re.compile(ur'(?P<main>.*?)((단행본.*?)?|특별편)?(\s(?P<sub>(\d|\-|\.)*?(화|권)))?(\s\(완결\))?\s?$').match(title)
+            #match = re.compile(ur'(?P<main>.*?)((단행본.*?)?|특별편)?(\s(?P<sub>(\d|\-|\.)*?(화|권)))?(\s\(완결\))?\s?$').match(title)
+            match = re.compile(ur'(?P<main>.*?)((단행본.*?)?|특별편)?(\s(?P<sub>(\d|\-|\.)*?(화|권)))?(\-)?(전|후)?(\s\(완결\))?\s?$').match(title)
             
             if match:
                 queue_entity_episode.maintitle = match.group('main').strip()
             else:
-                queue_entity_episode.maintitle = title
-                logger.debug('not match')
+                match2 = re.compile(ur'(?P<main>.*?)\s시즌')
+                if match2:
+                    queue_entity_episode.maintitle = match2.group('main').strip()
+                else:
+                    queue_entity_episode.maintitle = title
+                    logger.debug('not match')
             queue_entity_episode.maintitle = LogicMD.titlereplace(queue_entity_episode.maintitle)
 
             if ModelSetting.get('use_title_folder') == 'True':
