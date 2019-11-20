@@ -35,7 +35,7 @@ def plugin_unload():
     Logic.plugin_unload()
 
 plugin_info = {
-    'version' : '0.2.0.3',
+    'version' : '0.2.0.4',
     'name' : 'Manamoa 다운로더 2',
     'category_name' : 'service',
     'icon' : '',
