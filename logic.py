@@ -39,7 +39,7 @@ class Logic(object):
         "downlist" : "",
         "discord_webhook" : "False",
         "discord_webhook_url" : "",
-        'dfolder' : os.path.join(path_data, 'mamamoa'),
+        'dfolder' : os.path.join(path_data, 'manamoa'),
         "pagecount" : "1",
         "use_selenium" : 'False',
         "blacklist" : "",
