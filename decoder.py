@@ -45,7 +45,6 @@ class Decoder(object):
 
         self.order = []
         for i in range(self.cx*self.cy):
-            #print i
             tmp = []
             tmp.append(i)
             if self.id < 554714:
@@ -95,14 +94,12 @@ if __name__ == "__main__":
     try:
         #https://manamoa15.net/bbs/board.php?bo_table=manga&wr_id=694872
         #var view_cnt = 397340;
-        
-        print os.path.dirname(__file__)
+
         test_dir =os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test')
         tmp = os.listdir(test_dir)
         decoder = Decoder(397340, 694872)
         for idx, t in enumerate(tmp):
             im = Image.open(os.path.join(test_dir, t))
-            print im.width
             output = decoder.decode(im)
             output.save('%s.jpg' % idx)
             #break
