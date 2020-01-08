@@ -17,11 +17,11 @@ from framework.logger import get_logger
 
 # 패키지
 import system
+from .plugin import package_name, logger
 from .model import ModelSetting, ModelManamoaItem
 
 
-package_name = __name__.split('.')[0].split('_sjva')[0]
-logger = get_logger(package_name)
+
 #########################################################
 import urllib
 import time
@@ -288,11 +288,25 @@ class LogicMD(object):
             if not os.path.exists(download_path):
                 os.makedirs(download_path)
             tmp = os.path.join(download_path, str(1).zfill(5)+'.jpg')
-            filesize = requests.get(mangajpglist[0]).status_code
-            if filesize == 200:
+            logger.debug(mangajpglist[0])
+
+            status_code = requests.get(mangajpglist[0]).status_code
+            replace_rule = None
+            if status_code == 200:
+                replace_rule = ''
+            else:
+                status_code = requests.get(mangajpglist[0].replace('https://', 'https://s3.')).status_code
+                if status_code == 200:
+                    replace_rule = 's3.'
+                else:
+                    status_code = requests.get(mangajpglist[0].replace('https://', 'https://img.')).status_code
+                    if status_code == 200:
+                        replace_rule = 'img.'
+            logger.debug('Replace_rule : %s', replace_rule)
+            if replace_rule is not None:
                 for idx, tt in enumerate(mangajpglist):
                     image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.jpg')
-                    LogicMD.image_download(tt, image_filepath, decoder)
+                    LogicMD.image_download(tt.replace('https://', 'https://%s' % replace_rule), image_filepath, decoder)
                     queue_entity_episode.current_image_index = idx
                     plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
             else:

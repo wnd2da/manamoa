@@ -20,10 +20,10 @@
  * Copyright(c) 2011 antimatter15
  */
 
-import { Book } from './book.js';
-import { BookViewer, FitMode } from './book-viewer.js';
-import { ReadingStack } from './reading-stack.js';
-import { Key, Params, getElem } from './helpers.js';
+import { Book } from './book.js.js';
+import { BookViewer, FitMode } from './book-viewer.js.js';
+import { ReadingStack } from './reading-stack.js.js';
+import { Key, Params, getElem } from './helpers.js.js';
 
 if (window.kthoom == undefined) {
   window.kthoom = {};

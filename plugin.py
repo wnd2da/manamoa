@@ -20,11 +20,13 @@ from framework.util import Util, AlchemyEncoder
 from system.logic import SystemLogic
             
 # 패키지
+package_name = __name__.split('.')[0].split('_sjva')[0]
+logger = get_logger(package_name)
+
 from logic import Logic
 from model import ModelSetting
 
-package_name = __name__.split('.')[0].split('_sjva')[0]
-logger = get_logger(package_name)
+
 
 blueprint = Blueprint(package_name, package_name, url_prefix='/%s' %  package_name, template_folder=os.path.join(os.path.dirname(__file__), 'templates'), static_folder=os.path.join(os.path.dirname(__file__), 'kthoom'), static_url_path='kthoom')
 
@@ -35,13 +37,13 @@ def plugin_unload():
     Logic.plugin_unload()
 
 plugin_info = {
-    'version' : '0.2.0.4',
+    'version' : '0.2.1',
     'name' : 'Manamoa 다운로더 2',
     'category_name' : 'service',
     'icon' : '',
     'developer' : 'soju6jan',
     'description' : '마나모아 다운로드<br>원작자 :noname님',
-    'home' : 'https://github.com/soju6jan/manamoa_sjva',
+    'home' : 'https://github.com/soju6jan/manamoa',
     'more' : '',
 }
 #########################################################

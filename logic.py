@@ -17,11 +17,10 @@ from framework.util import Util
 from framework.logger import get_logger
 
 # 패키지
+from .plugin import package_name, logger
 from .model import ModelSetting, ModelManamoaItem
 from .logic_queue import LogicQueue
 
-package_name = __name__.split('.')[0].split('_sjva')[0]
-logger = get_logger(package_name)
 #########################################################
 
 
@@ -277,6 +276,7 @@ class Logic(object):
         try:
             db_id = int(req.form['id'])
             item = db.session.query(ModelManamoaItem).filter(ModelManamoaItem.id == db_id).first()
+            
             if item is not None:
                 db.session.delete(item)
                 db.session.commit()
