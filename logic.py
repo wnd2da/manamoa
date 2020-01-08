@@ -29,7 +29,7 @@ class Logic(object):
         'auto_start' : 'False',
         'interval' : '30',
         'web_page_size' : '30',
-        "sitecheck" : "https://manamoa17.net",
+        "sitecheck" : "https://manamoa23.net",
         "all_download" : "False",
         "zip" : "True",
         "cloudflare_bypass" : "False",
