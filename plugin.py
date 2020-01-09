@@ -20,7 +20,7 @@ from framework.util import Util, AlchemyEncoder
 from system.logic import SystemLogic
             
 # 패키지
-package_name = __name__.split('.')[0].split('_sjva')[0]
+package_name = __name__.split('.')[0]
 logger = get_logger(package_name)
 
 from logic import Logic

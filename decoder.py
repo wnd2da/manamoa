@@ -11,9 +11,7 @@ else:
 logger = None
 try:
     # SJVA
-    from framework.logger import get_logger
-    package_name = __name__.split('.')[0].split('_sjva')[0]
-    logger = get_logger(package_name)
+    from .plugin import package_name, logger
 except:
     import logging
     logger = logging.getLogger(__name__)
