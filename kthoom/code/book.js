@@ -5,7 +5,7 @@
  *
  * Copyright(c) 2018 Google Inc.
  */
-import { Page, createPageFromFile } from './page.js.js';
+import { Page, createPageFromFile } from './page.js';
 
 const LoadState = {
   NOT_LOADED: 0,

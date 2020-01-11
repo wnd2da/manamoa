@@ -7,9 +7,9 @@
  */
 
 import { Book, BookEvent, BookProgressEvent, UnarchivePageExtractedEvent,
-         UnarchiveCompleteEvent } from './book.js.js';
-import { assert, getElem } from './helpers.js.js';
-import { ImagePage, HtmlPage, TextPage } from './page.js.js';
+         UnarchiveCompleteEvent } from './book.js';
+import { assert, getElem } from './helpers.js';
+import { ImagePage, HtmlPage, TextPage } from './page.js';
 
 const BOOK_VIEWER_ELEM_ID = 'bookViewer';
 const ID_PAGE_1 = 'page1';

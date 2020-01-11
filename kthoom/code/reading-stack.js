@@ -5,7 +5,7 @@
  *
  * Copyright(c) 2018 Google Inc.
  */
-import { getElem } from './helpers.js.js';
+import { getElem } from './helpers.js';
 
 // TODO: Have the ReadingStack subscribe to all of its book events.
 // TODO: Have the ReadingStack display progress bars in the pane as books load
