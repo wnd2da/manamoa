@@ -8,6 +8,7 @@ import logging
 import threading
 import Queue
 # third-party
+from selenium.webdriver.support.ui import WebDriverWait
 
 # sjva 공용
 from framework import db, scheduler, path_data
@@ -129,7 +130,7 @@ class LogicMD(object):
                 zipfilename = os.path.join(os.path.dirname(zip_path), '%s.zip' % os.path.basename(zip_path))
                 fantasy_zip = zipfile.ZipFile(zipfilename, 'w')
                 for f in os.listdir(zip_path):
-                    if f.endswith('.jpg'):
+                    if f.endswith('.jpg') or f.endswith('.png'):
                         src = os.path.join(zip_path, f)
                         fantasy_zip.write(src, os.path.basename(src), compress_type = zipfile.ZIP_DEFLATED)
                 fantasy_zip.close()
@@ -231,18 +232,20 @@ class LogicMD(object):
         wr_id = queue_entity_episode.wr_id
         logger.debug('Episode Download wr_id:%s', wr_id)
         try:
+            from system import LogicSelenium
+            driver = LogicSelenium.get_driver()
             url = '%s/bbs/board.php?bo_table=manga&wr_id=%s' % (ModelSetting.get('sitecheck'), wr_id)
-            page_source2 = LogicMD.pageparser(url)
-            soup = BeautifulSoup(page_source2, 'html.parser')
-            mangaid = soup.find('a','btn btn-color btn-sm')['href'].replace('/bbs/page.php?hid=manga_detail&manga_id=','')
-            queue_entity_episode.manga_id = mangaid
-            mangascore = soup.find('span','count').text.replace('인기 : ','')
-            title = soup.title.text
+            driver.get(url)
+            
+            tag = WebDriverWait(driver, 30).until(lambda driver: driver.find_element_by_xpath('//*[@id="thema_wrapper"]/div[3]/div/div/div[1]/div[2]/div[1]/div/div[1]/a[2]'))
+
+            S = lambda X: driver.execute_script('return document.body.parentNode.scroll'+X)
+            driver.set_window_size(S('Width'),S('Height')) # May need manual adjustment  
+
+            queue_entity_episode.manga_id = tag.get_attribute('href').split('=')[-1]
+            title = driver.title
             queue_entity_episode.title = LogicMD.titlereplace(title)
-            #match = re.compile(ur'(?P<main>.*?)((단행본.*?)?|특별편)?(\s(?P<sub>(\d|\-|\.)*?(화|권)))?(\s\(완결\))?\s?$').match(title)
-            #match = re.compile(ur'(?P<main>.*?)((단행본.*?)?|특별편)?(\s(?P<sub>(\d|\-|\.)*?(화|권)))?(\-)?(전|후|중)?(\s\(완결\))?\s?$').match(title)
             match = re.compile(ur'(?P<main>.*?)((단행본.*?)?|특별편)?(\s(?P<sub>(\d|\-|\.)*?(화|권)))?(\-)?(전|후|중)?(\s?\d+(\-\d+)?화)?(\s\(완결\))?\s?$').match(title)
-       
             
             if match:
                 queue_entity_episode.maintitle = match.group('main').strip()
@@ -260,82 +263,32 @@ class LogicMD(object):
             else:
                 download_path = os.path.join(ModelSetting.get('dfolder'), queue_entity_episode.title)
            
-            if page_source2 is None:
-                logger.error('Source is None')
-                queue_entity_episode.status = '실패'
-                
-                return False
-            page_count = page_source2.find('var img_list = [')
-            page_count2 = page_source2.find(']', page_count)
-            mangajpglist = page_source2[page_count+16:page_count2].replace('\\','').replace('"','').split(',')
-            page_count22 = page_source2.find('var img_list1 = [')
-            page_count222 = page_source2.find(']', page_count22)
-            mangajpglist2 = page_source2[page_count22+16:page_count222].replace('\\','').replace('"','').split(',')
-            
-            tmp1 = page_source2.find('var view_cnt =')
-            tmp1 = page_source2.find('=', tmp1) + 1
-            tmp2 = page_source2.find(';', tmp1)
-            view_cnt = int(page_source2[tmp1:tmp2].strip())
-            wr_id = int(url.split('wr_id=')[1].split('&')[0])
-            logger.debug('view_cnt :%s, wr_id:%s', view_cnt, wr_id)
-            if view_cnt == 0:
-                decoder = None
-            else:
-                from .decoder import Decoder
-                decoder = Decoder(view_cnt, wr_id)
+
+            logger.debug(title)
+            logger.debug(queue_entity_episode.maintitle)
+
+            image_tags = WebDriverWait(driver, 30).until(lambda driver: driver.find_elements_by_xpath('//*[@id="thema_wrapper"]/div[3]/div/div/div[1]/div[2]/div[5]/div/img'))
+
             queue_entity_episode.status = '다운로드중'
-            queue_entity_episode.total_image_count = len(mangajpglist)
+            queue_entity_episode.total_image_count = len(image_tags)
             if not os.path.exists(download_path):
                 os.makedirs(download_path)
-            tmp = os.path.join(download_path, str(1).zfill(5)+'.jpg')
-            logger.debug(mangajpglist[0])
+            
 
-            status_code = requests.get(mangajpglist[0]).status_code
-            replace_rule = None
-            if status_code == 200:
-                replace_rule = ''
-            else:
-                status_code = requests.get(mangajpglist[0].replace('https://', 'https://s3.')).status_code
-                if status_code == 200:
-                    replace_rule = 's3.'
-                else:
-                    status_code = requests.get(mangajpglist[0].replace('https://', 'https://img.')).status_code
-                    if status_code == 200:
-                        replace_rule = 'img.'
-            logger.debug('Replace_rule : %s', replace_rule)
-            if replace_rule is not None:
-                for idx, tt in enumerate(mangajpglist):
-                    image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.jpg')
-                    LogicMD.image_download(tt.replace('https://', 'https://%s' % replace_rule), image_filepath, decoder)
-                    queue_entity_episode.current_image_index = idx
-                    plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
-            else:
-                if mangajpglist[0].find('img.') != -1:
-                    for idx, tt in enumerate(mangajpglist):
-                        image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.jpg')
-                        downresult = LogicMD.image_download(tt.replace('img.','s3.'), image_filepath, decoder)
-                        if downresult != 200 and mangajpglist2[0].find('google') != -1:
-                            for idx, tt in enumerate(mangajpglist2):
-                                image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.jpg')
-                                gdd.download_file_from_google_drive(file_id=tt.replace('https://drive.google.com/uc?export=view&id=',''), dest_path=image_filepath)
-                                queue_entity_episode.current_image_index = idx
-                                plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
-                            break
-                        queue_entity_episode.current_image_index = idx
-                        plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
-                else:
-                    for idx, tt in enumerate(mangajpglist):
-                        image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.jpg')
-                        downresult = LogicMD.image_download(tt.replace('s3.','img.'), image_filepath, decoder)
-                        if downresult != 200 and mangajpglist2[0].find('google') != -1:
-                            for idx, tt in enumerate(mangajpglist2):
-                                image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.jpg')
-                                gdd.download_file_from_google_drive(file_id=tt.replace('https://drive.google.com/uc?export=view&id=',''), dest_path=image_filepath)
-                                queue_entity_episode.current_image_index = idx
-                                plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
-                            break
-                        queue_entity_episode.current_image_index = idx
-                        plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
+            for idx, tag in enumerate(image_tags):
+                #driver.execute_script("arguments[0].scrollIntoView();", tag)
+                #tag.location_once_scrolled_into_view
+
+                image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.png')
+                logger.debug(image_filepath)
+                ret = tag.screenshot(image_filepath)
+                logger.debug(ret)
+                
+                queue_entity_episode.current_image_index = idx
+                plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
+
+
+                
             LogicMD.senddiscord(u'{} 다운로드 완료'.format(title))
             if ModelSetting.get('zip') == 'True':
                 LogicMD.makezip(download_path)

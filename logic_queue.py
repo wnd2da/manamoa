@@ -14,7 +14,6 @@ import json
 from framework import db, scheduler, path_data
 from framework.job import Job
 from framework.util import Util
-from framework.logger import get_logger
 
 # 패키지
 import system
@@ -203,7 +202,6 @@ class LogicQueue(object):
     @staticmethod
     def reset_queue():
         try:
-
             with LogicQueue.download_queue.mutex:
                 LogicQueue.download_queue.queue.clear()
             QueueEntity.entity_list = []
