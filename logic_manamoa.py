@@ -280,9 +280,9 @@ class LogicMD(object):
                 #tag.location_once_scrolled_into_view
 
                 image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.png')
-                logger.debug(image_filepath)
+                #logger.debug(image_filepath)
                 ret = tag.screenshot(image_filepath)
-                logger.debug(ret)
+                #logger.debug(ret)
                 
                 queue_entity_episode.current_image_index = idx
                 plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
