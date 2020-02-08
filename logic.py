@@ -26,24 +26,25 @@ from .logic_queue import LogicQueue
 
 class Logic(object):
     db_default = {
+        'db_version' : '1',
         'auto_start' : 'False',
         'interval' : '30',
         'web_page_size' : '30',
-        "sitecheck" : "https://manamoa23.net",
+        "sitecheck" : "https://manamoa27.net",
         "all_download" : "False",
         "zip" : "True",
-        "cloudflare_bypass" : "False",
-        "proxy" : "False",
-        "proxy_url" : "",
         "downlist" : "",
-        "discord_webhook" : "False",
-        "discord_webhook_url" : "",
-        'dfolder' : os.path.join(path_data, 'manamoa'),
+        'dfolder' : os.path.join(path_data, package_name),
         "pagecount" : "1",
         "use_selenium" : 'False',
         "blacklist" : "",
         'use_title_folder' : 'True', 
         'server_number' : '17'
+        #"discord_webhook" : "False",
+        #"discord_webhook_url" : "",
+        #"cloudflare_bypass" : "False",
+        #"proxy" : "False",
+        #"proxy_url" : "",
     }
 
 
@@ -54,6 +55,7 @@ class Logic(object):
                 if db.session.query(ModelSetting).filter_by(key=key).count() == 0:
                     db.session.add(ModelSetting(key, value))
             db.session.commit()
+            Logic.migration()
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
@@ -65,35 +67,13 @@ class Logic(object):
             logger.debug('%s plugin_load', package_name)
             # DB 초기화
             Logic.db_init()
-
-            # 필요 패키지 설치
-            try:
-                from bs4 import BeautifulSoup
-                import cfscrape
-                from discord_webhook import DiscordWebhook
-            except:
-                try:
-                    os.system('pip install -r %s' % os.path.join(os.path.dirname(__file__), 'requirements.txt'))
-                except:
-                    logger.error('pip install error!!')
-                    pass
-
-            # 다운로드 폴더 생성
-            download_path = Logic.get_setting_value('dfolder')
-            if not os.path.exists(download_path):
-                try:
-                    os.mkdir(download_path)
-                except:
-                    logger.error('donwload_path make error!!')
+            # 자동시작 옵션이 있으면 보통 여기서
+            if ModelSetting.get_bool('auto_start'):
+                Logic.scheduler_start()
             # 편의를 위해 json 파일 생성
             from plugin import plugin_info
             Util.save_from_dict_to_json(plugin_info, os.path.join(os.path.dirname(__file__), 'info.json'))
-
             LogicQueue.queue_start()
-
-            # 자동시작 옵션이 있으면 보통 여기서
-            if ModelSetting.query.filter_by(key='auto_start').first().value == 'True':
-                Logic.scheduler_start()
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
@@ -112,7 +92,7 @@ class Logic(object):
     def scheduler_start():
         try:
             logger.debug('%s scheduler_start', package_name)
-            interval = Logic.get_setting_value('interval')
+            interval = ModelSetting.get('interval')
             job = Job(package_name, package_name, interval, Logic.scheduler_function, u"마나모아 다운로더", False)
             scheduler.add_job_instance(job)
         except Exception as e:
@@ -129,43 +109,16 @@ class Logic(object):
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
 
-
-    @staticmethod
-    def setting_save(req):
-        try:
-            for key, value in req.form.items():
-                logger.debug('Key:%s Value:%s', key, value)
-                entity = db.session.query(ModelSetting).filter_by(key=key).with_for_update().first()
-                entity.value = value
-            db.session.commit()
-            return True
-        except Exception as e:
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-            logger.error('key:%s value:%s', key, value)
-            return False
-
-
-    @staticmethod
-    def get_setting_value(key):
-        try:
-            return db.session.query(ModelSetting).filter_by(key=key).first().value
-        except Exception as e:
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-
-
     @staticmethod
     def scheduler_function():
         try:
-            from logic_manamoa import LogicMD
-            LogicMD.start()
+            from .logic_normal import LogicNormal
+            LogicNormal.scheduler_function()
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
 
 
-    job_thread = None
     @staticmethod
     def one_execute():
         try:
@@ -179,14 +132,9 @@ class Logic(object):
                 def func():
                     time.sleep(2)
                     Logic.scheduler_function()
-                    Logic.job_thread = None
-                if Logic.job_thread is None:
-                    Logic.job_thread = threading.Thread(target=func, args=())
-                    Logic.job_thread.start()
-                    ret = 'thread'
-                else:
-                    ret = 'is_running'
-        except Exception as e:
+                threading.Thread(target=func, args=()).start()
+                ret = 'thread'
+        except Exception as e: 
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
             ret = 'fail'
@@ -203,6 +151,24 @@ class Logic(object):
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
             return False
+
+
+    @staticmethod
+    def process_telegram_data(data):
+        try:
+            logger.debug(data)
+        except Exception as e: 
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+
+    @staticmethod
+    def migration():
+        try:
+            pass
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+
 
     # 기본 구조 End
     ##################################################################
@@ -224,11 +190,12 @@ class Logic(object):
             logger.error(traceback.format_exc())
             return False
 
+
     @staticmethod
     def get_zip_list():
         try:
             ret = []
-            download_path = Logic.get_setting_value('dfolder')
+            download_path = ModelSetting.get('dfolder')
             tmp = os.listdir(download_path)
             for t in tmp:
                 title_path = os.path.join(download_path, t)
@@ -306,8 +273,8 @@ class Logic(object):
             db_id = int(req.form['id'])
             item = db.session.query(ModelManamoaItem).filter(ModelManamoaItem.id == db_id).first()
             if item is not None:
-                from logic_manamoa import LogicMD
-                tmp = LogicMD.titlereplace(item.main_title)
+                from .logic_normal import LogicNormal
+                tmp = LogicNormal.titlereplace(item.main_title)
                 entity = db.session.query(ModelSetting).filter_by(key='blacklist').with_for_update().first()
                 if entity.value.strip() == '':
                     entity.value = tmp

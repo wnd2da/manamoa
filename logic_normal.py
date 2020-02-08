@@ -22,7 +22,6 @@ from .plugin import package_name, logger
 from .model import ModelSetting, ModelManamoaItem
 
 
-
 #########################################################
 import urllib
 import time
@@ -55,20 +54,19 @@ from google_drive_downloader import GoogleDriveDownloader as gdd
 from PIL import Image
 #############################################################################################
 
-class LogicMD(object):
+class LogicNormal(object):
     scraper = None
     stop_flag = False
-
-    RECENT = '%s/bbs/board.php?bo_table=manga'
+    driver = None
 
     @staticmethod
-    def start():
+    def scheduler_function():
         from logic_queue import LogicQueue
-        logger.debug('LogicMD Start')
+        logger.debug('LogicNormal Start')
         try:
-            LogicMD.stop_flag = False
-            url = LogicMD.RECENT % ModelSetting.get('sitecheck')
-            page_source = LogicMD.pageparser(url)
+            LogicNormal.stop_flag = False
+            url = '%s/bbs/board.php?bo_table=manga' % ModelSetting.get('sitecheck')
+            page_source = LogicNormal.pageparser(url)
             soup = BeautifulSoup(page_source, 'html.parser')
             for t in soup.find_all('div', class_='post-row'):
                 a_tags = t.find_all('a')
@@ -79,7 +77,7 @@ class LogicMD(object):
                 else:
                     wr_id = a_tags[0]['href'].split('wr_id=')[1]
                     LogicQueue.add_queue_episode(manga_id, wr_id, True, title)
-                if LogicMD.stop_flag:
+                if LogicNormal.stop_flag:
                     break
             import plugin
             plugin.send_queue_list()
@@ -135,7 +133,7 @@ class LogicMD(object):
                         fantasy_zip.write(src, os.path.basename(src), compress_type = zipfile.ZIP_DEFLATED)
                 fantasy_zip.close()
             shutil.rmtree(zip_path)
-            LogicMD.senddiscord(u'{}  압축 완료'.format(os.path.basename(zip_path)))
+            LogicNormal.senddiscord(u'{}  압축 완료'.format(os.path.basename(zip_path)))
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
@@ -154,13 +152,13 @@ class LogicMD(object):
             elif ModelSetting.get('proxy') == 'True' and ModelSetting.get('cloudflare_bypass') == 'False':
                 page_source = requests.get(url,headers=headers,proxies={"https": ModelSetting.get('proxy_url'), 'http':ModelSetting.get('proxy_url')}).text
             elif ModelSetting.get('proxy') == 'False' and ModelSetting.get('cloudflare_bypass') == 'True':
-                if LogicMD.scraper is None:
-                    LogicMD.scraper = cfscrape.create_scraper()
-                page_source = LogicMD.scraper.get(url,headers=headers).text
+                if LogicNormal.scraper is None:
+                    LogicNormal.scraper = cfscrape.create_scraper()
+                page_source = LogicNormal.scraper.get(url,headers=headers).text
             elif ModelSetting.get('proxy') == 'True' and ModelSetting.get('cloudflare_bypass') == 'True':
-                if LogicMD.scraper is None:
-                    LogicMD.scraper = cfscrape.create_scraper()
-                page_source = LogicMD.scraper.get(url,headers=headers,proxies={"https": ModelSetting.get('proxy_url'), 'http':ModelSetting.get('proxy_url') }).text
+                if LogicNormal.scraper is None:
+                    LogicNormal.scraper = cfscrape.create_scraper()
+                page_source = LogicNormal.scraper.get(url,headers=headers,proxies={"https": ModelSetting.get('proxy_url'), 'http':ModelSetting.get('proxy_url') }).text
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
@@ -172,16 +170,16 @@ class LogicMD(object):
     def download(entity):
         import plugin
         from .logic_queue import QueueEntityEpisode
-        LogicMD.stop_flag = False
+        LogicNormal.stop_flag = False
         try:
             if entity.auto:
-                flag = LogicMD.is_exist_download_list(entity.title)
+                flag = LogicNormal.is_exist_download_list(entity.title)
             else:
                 flag = True
 
             if flag:
                 if entity.wr_id is None:
-                    LogicMD.make_episode_list_from_manga_id(entity)
+                    LogicNormal.make_episode_list_from_manga_id(entity)
                     plugin.socketio_callback('queue_one', entity.as_dict(), encoding=False)
                 else:
                     entity.add(entity.wr_id)
@@ -189,13 +187,13 @@ class LogicMD(object):
                 for e in entity.episodes:
                     m = ModelManamoaItem.get(e.wr_id)
                     if m is None:
-                        if LogicMD.episode_download(e):
+                        if LogicNormal.episode_download(e):
                             ModelManamoaItem.save(e)
                     else:
                         e.title = m.title
                         e.status = '이미 받음'
                         plugin.socketio_callback('episode', e.as_dict(), encoding=False)
-                    if LogicMD.stop_flag:
+                    if LogicNormal.stop_flag:
                         break
                 entity.status = '완료'
                 plugin.socketio_callback('queue_one', entity.as_dict(), encoding=False)
@@ -209,15 +207,15 @@ class LogicMD(object):
 
     @staticmethod
     def stop():
-        LogicMD.stop_flag = True
+        LogicNormal.stop_flag = True
 
     @staticmethod
     def make_episode_list_from_manga_id(manga):
         try:
             url = ModelSetting.get('sitecheck') + '/bbs/page.php?hid=manga_detail&manga_id=' + manga.manga_id
-            page_source = LogicMD.pageparser(url)
+            page_source = LogicNormal.pageparser(url)
             soup = BeautifulSoup(page_source, 'html.parser')
-            manga.title = LogicMD.titlereplace(soup.find('div', class_='red title').text)
+            manga.title = LogicNormal.titlereplace(soup.find('div', class_='red title').text)
             for t in list(reversed(soup.find_all('div', class_='slot'))):
                 manga.add(t.find('a')['href'].split('wr_id=')[1])
         except Exception as e:
@@ -233,18 +231,23 @@ class LogicMD(object):
         logger.debug('Episode Download wr_id:%s', wr_id)
         try:
             from system import LogicSelenium
-            driver = LogicSelenium.get_driver()
+            if LogicNormal.driver is None:
+                LogicNormal.driver = LogicSelenium.create_driver()
+
+            driver = LogicNormal.driver
             url = '%s/bbs/board.php?bo_table=manga&wr_id=%s' % (ModelSetting.get('sitecheck'), wr_id)
             driver.get(url)
             
+            fix_tag = WebDriverWait(driver, 30).until(lambda driver: driver.find_element_by_xpath('//*[@id="thema_wrapper"]/div[3]/div/div/div[1]/div[2]/div[3]/div'))
+            LogicSelenium.remove_element(driver, fix_tag)
+
+
             tag = WebDriverWait(driver, 30).until(lambda driver: driver.find_element_by_xpath('//*[@id="thema_wrapper"]/div[3]/div/div/div[1]/div[2]/div[1]/div/div[1]/a[2]'))
 
-            S = lambda X: driver.execute_script('return document.body.parentNode.scroll'+X)
-            driver.set_window_size(S('Width'),S('Height')) # May need manual adjustment  
 
             queue_entity_episode.manga_id = tag.get_attribute('href').split('=')[-1]
             title = driver.title
-            queue_entity_episode.title = LogicMD.titlereplace(title)
+            queue_entity_episode.title = LogicNormal.titlereplace(title)
             match = re.compile(ur'(?P<main>.*?)((단행본.*?)?|특별편)?(\s(?P<sub>(\d|\-|\.)*?(화|권)))?(\-)?(전|후|중)?(\s?\d+(\-\d+)?화)?(\s\(완결\))?\s?$').match(title)
             
             if match:
@@ -256,7 +259,7 @@ class LogicMD(object):
                 else:
                     queue_entity_episode.maintitle = title
                     logger.debug('not match')
-            queue_entity_episode.maintitle = LogicMD.titlereplace(queue_entity_episode.maintitle)
+            queue_entity_episode.maintitle = LogicNormal.titlereplace(queue_entity_episode.maintitle)
 
             if ModelSetting.get('use_title_folder') == 'True':
                 download_path = os.path.join(ModelSetting.get('dfolder'), queue_entity_episode.maintitle, queue_entity_episode.title)
@@ -269,32 +272,41 @@ class LogicMD(object):
 
             image_tags = WebDriverWait(driver, 30).until(lambda driver: driver.find_elements_by_xpath('//*[@id="thema_wrapper"]/div[3]/div/div/div[1]/div[2]/div[5]/div/img'))
 
-            queue_entity_episode.status = '다운로드중'
+            
             queue_entity_episode.total_image_count = len(image_tags)
             if not os.path.exists(download_path):
                 os.makedirs(download_path)
-            
-
-            for idx, tag in enumerate(image_tags):
-                #driver.execute_script("arguments[0].scrollIntoView();", tag)
-                #tag.location_once_scrolled_into_view
-
-                image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.png')
-                #logger.debug(image_filepath)
-                ret = tag.screenshot(image_filepath)
-                #logger.debug(ret)
-                
-                queue_entity_episode.current_image_index = idx
-                plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
-
-
-                
-            LogicMD.senddiscord(u'{} 다운로드 완료'.format(title))
-            if ModelSetting.get('zip') == 'True':
-                LogicMD.makezip(download_path)
-            queue_entity_episode.status = '완료'
+            queue_entity_episode.status = '캡처중'
             plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
-            return True
+            
+            full = LogicSelenium.full_screenshot(driver)
+            if full is None:
+                queue_entity_episode.status = '실패'
+                plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)    
+            else:
+                queue_entity_episode.status = '파일 생성중'
+                for idx, tag in enumerate(image_tags):
+                    image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.png')
+                    left = tag.location['x'] 
+                    top = tag.location['y'] 
+                    right = tag.location['x'] + tag.size['width']
+                    bottom = top + tag.size['height'] 
+
+                    logger.debug('%s %s %s %s %s', idx, left, top, right, bottom)
+
+                    im = full.crop((left, top, right, bottom)) # defines crop points
+                    im.save(image_filepath)
+                    
+                    queue_entity_episode.current_image_index = idx
+                    plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
+
+                    
+                LogicNormal.senddiscord(u'{} 다운로드 완료'.format(title))
+                if ModelSetting.get('zip') == 'True':
+                    LogicNormal.makezip(download_path)
+                queue_entity_episode.status = '완료'
+                plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
+                return True
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
@@ -308,13 +320,13 @@ class LogicMD(object):
             if tmp == '':
                 flag = True
             downlist = tmp.split('|')
-            title = LogicMD.titlereplace(title).replace(' ', '')
+            title = LogicNormal.titlereplace(title).replace(' ', '')
             for downcheck in downlist:
                 downcheck = downcheck.strip()
                 if downcheck == '':
                     pass
                 else:
-                    if title.find(LogicMD.titlereplace(downcheck).replace(' ', '')) != -1:
+                    if title.find(LogicNormal.titlereplace(downcheck).replace(' ', '')) != -1:
                         flag = True
                         break
             tmp = ModelSetting.get('blacklist').strip()
@@ -327,7 +339,7 @@ class LogicMD(object):
                     if downcheck == '':
                         pass
                     else:
-                        if title.find(LogicMD.titlereplace(downcheck).replace(' ', '')) != -1:
+                        if title.find(LogicNormal.titlereplace(downcheck).replace(' ', '')) != -1:
                             flag = False
                             break
         except Exception as e:

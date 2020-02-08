@@ -19,7 +19,7 @@ from framework.util import Util
 import system
 from .plugin import package_name, logger
 from .model import ModelSetting
-from logic_manamoa import LogicMD
+from .logic_normal import LogicNormal
 
 
 #########################################################

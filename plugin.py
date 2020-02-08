@@ -23,9 +23,8 @@ from system.logic import SystemLogic
 package_name = __name__.split('.')[0]
 logger = get_logger(package_name)
 
-from logic import Logic
-from model import ModelSetting
-
+from .logic import Logic
+from .model import ModelSetting
 
 
 blueprint = Blueprint(package_name, package_name, url_prefix='/%s' %  package_name, template_folder=os.path.join(os.path.dirname(__file__), 'templates'), static_folder=os.path.join(os.path.dirname(__file__), 'kthoom'), static_url_path='kthoom')
@@ -38,7 +37,7 @@ def plugin_unload():
 
 plugin_info = {
     'version' : '0.2.1',
-    'name' : 'Manamoa 다운로더 2',
+    'name' : '마나모아 다운로드',
     'category_name' : 'service',
     'icon' : '',
     'developer' : 'soju6jan',
@@ -50,9 +49,9 @@ plugin_info = {
 
 # 메뉴 구성.
 menu = {
-    'main' : [package_name, 'Manamoa 다운로더 2'],
+    'main' : [package_name, '마나모아 다운로드'],
     'sub' : [
-        ['setting', '설정'], ['request', '요청'], ['queue', '큐'], ['list', '목록'], ['viewer', '뷰어'], ['log', '로그']
+        ['setting', '설정'], ['request', '요청'], ['queue', '큐'], ['list', '목록'], ['log', '로그']
     ], 
     'category' : 'service',
 }  
@@ -66,26 +65,16 @@ def home():
     
 @blueprint.route('/<sub>')
 @login_required
-def detail(sub): 
+def first_menu(sub): 
+    arg = ModelSetting.to_dict()
+    arg['package_name']  = package_name
     if sub == 'setting':
-        setting_list = db.session.query(ModelSetting).all()
-        arg = Util.db_list_to_dict(setting_list)
         arg['scheduler'] = str(scheduler.is_include(package_name))
         arg['is_running'] = str(scheduler.is_running(package_name))
         return render_template('%s_%s.html' % (package_name, sub), arg=arg)
     elif sub == 'request':
-        arg = {}
         arg['is_running'] = str(scheduler.is_running(package_name))
         return render_template('%s_%s.html' % (package_name, sub), arg=arg)
-    elif sub == 'command_list':
-        arg = {}
-        arg['list_type'] = "command_list"
-        return render_template('%s_list.html' % (package_name), arg=arg)
-    elif sub == 'kthoom':
-        return blueprint.send_static_file('index.html')
-    elif sub == 'viewer':
-        site = "/manamoa/kthoom?bookUri=dp"
-        return render_template('iframe.html', site=site)
     elif sub in ['queue', 'list']:
         return render_template('%s_%s.html' % (package_name, sub))
     elif sub == 'log':
@@ -98,15 +87,11 @@ def detail(sub):
 @blueprint.route('/ajax/<sub>', methods=['GET', 'POST'])
 def ajax(sub):
     logger.debug('AJAX %s %s', package_name, sub)
-    if sub == 'setting_save':
-        try:
-            ret = Logic.setting_save(request)
+    try:
+        if sub == 'setting_save':
+            ret = ModelSetting.setting_save(request)
             return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-    elif sub == 'scheduler':
-        try:
+        elif sub == 'scheduler':
             go = request.form['scheduler']
             logger.debug('scheduler :%s', go)
             if go == 'true':
@@ -114,86 +99,80 @@ def ajax(sub):
             else:
                 Logic.scheduler_stop()
             return jsonify(go)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-            return jsonify('fail')
-    elif sub == 'one_execute':
-        try:
+        elif sub == 'one_execute':
             ret = Logic.one_execute()
             return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-            return jsonify('fail')
-    # kthoom 에서 호출
-    elif sub == 'zip_list':
-        try:
-            ret = Logic.get_zip_list()
-            return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-            return jsonify('fail')   
-    elif sub == 'reset_db':
-        try:
+        elif sub == 'reset_db':
             ret = Logic.reset_db()
             return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-    elif sub == 'download_by_request':
-        try:
-            ret = Logic.download_by_request(request)
-            return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-    elif sub == 'completed_remove':
-        try:
-            from logic_queue import LogicQueue
-            ret = LogicQueue.completed_remove()
-            return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-    elif sub == 'reset_queue':
-        try:
-            from logic_queue import LogicQueue
-            ret = LogicQueue.reset_queue()
-            return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-    elif sub == 'item_list':
-        try:
-            ret = Logic.item_list(request)
-            return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-    elif sub == 'list_remove':
-        try:
-            ret = Logic.list_remove(request)
-            return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-    elif sub == 'list_all_download':
-        try:
-            ret = Logic.list_all_download(request)
-            return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-    elif sub == 'list_add_blacklist':
-        try:
-            ret = Logic.list_add_blacklist(request)
-            return jsonify(ret)
-        except Exception as e: 
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-    
+
+
+
+        # kthoom 에서 호출
+        elif sub == 'zip_list':
+            try:
+                ret = Logic.get_zip_list()
+                return jsonify(ret)
+            except Exception as e: 
+                logger.error('Exception:%s', e)
+                logger.error(traceback.format_exc())
+                return jsonify('fail')   
+        
+        elif sub == 'download_by_request':
+            try:
+                ret = Logic.download_by_request(request)
+                return jsonify(ret)
+            except Exception as e: 
+                logger.error('Exception:%s', e)
+                logger.error(traceback.format_exc())
+        elif sub == 'completed_remove':
+            try:
+                from logic_queue import LogicQueue
+                ret = LogicQueue.completed_remove()
+                return jsonify(ret)
+            except Exception as e: 
+                logger.error('Exception:%s', e)
+                logger.error(traceback.format_exc())
+        elif sub == 'reset_queue':
+            try:
+                from logic_queue import LogicQueue
+                ret = LogicQueue.reset_queue()
+                return jsonify(ret)
+            except Exception as e: 
+                logger.error('Exception:%s', e)
+                logger.error(traceback.format_exc())
+        elif sub == 'item_list':
+            try:
+                ret = Logic.item_list(request)
+                return jsonify(ret)
+            except Exception as e: 
+                logger.error('Exception:%s', e)
+                logger.error(traceback.format_exc())
+        elif sub == 'list_remove':
+            try:
+                ret = Logic.list_remove(request)
+                return jsonify(ret)
+            except Exception as e: 
+                logger.error('Exception:%s', e)
+                logger.error(traceback.format_exc())
+        elif sub == 'list_all_download':
+            try:
+                ret = Logic.list_all_download(request)
+                return jsonify(ret)
+            except Exception as e: 
+                logger.error('Exception:%s', e)
+                logger.error(traceback.format_exc())
+        elif sub == 'list_add_blacklist':
+            try:
+                ret = Logic.list_add_blacklist(request)
+                return jsonify(ret)
+            except Exception as e: 
+                logger.error('Exception:%s', e)
+                logger.error(traceback.format_exc())
+    except Exception as e: 
+        logger.error('Exception:%s', e)
+        logger.error(traceback.format_exc())  
+        return jsonify('fail')   
 
     
 
@@ -222,7 +201,7 @@ def kthroom_examples(path):
 @blueprint.route('/dp/<path:path>', methods=['GET', 'POST'])
 def kthroom_dp(path):
     tmp = path.split('/')
-    real_path = os.path.join(Logic.get_setting_value('dfolder'), tmp[0], tmp[1])
+    real_path = os.path.join(ModelSetting.get('dfolder'), tmp[0], tmp[1])
     real_path = real_path.replace(path_app_root, '')[1:].replace('\\', '/')
     logger.debug('load:%s', real_path)
     return send_from_directory('', real_path)

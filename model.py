@@ -19,7 +19,7 @@ app.config['SQLALCHEMY_BINDS'][package_name] = 'sqlite:///%s' % (db_file)
 
 
 class ModelSetting(db.Model):
-    __tablename__ = 'plugin_%s_setting' % package_name
+    __tablename__ = '%s_setting' % package_name
     __table_args__ = {'mysql_collate': 'utf8_general_ci'}
     __bind_key__ = package_name
 
@@ -40,10 +40,67 @@ class ModelSetting(db.Model):
     @staticmethod
     def get(key):
         try:
-            return db.session.query(ModelSetting).filter_by(key=key).first().value
+            return db.session.query(ModelSetting).filter_by(key=key).first().value.strip()
         except Exception as e:
             logger.error('Exception:%s %s', e, key)
             logger.error(traceback.format_exc())
+            
+    
+    @staticmethod
+    def get_int(key):
+        try:
+            return int(ModelSetting.get(key))
+        except Exception as e:
+            logger.error('Exception:%s %s', e, key)
+            logger.error(traceback.format_exc())
+    
+    @staticmethod
+    def get_bool(key):
+        try:
+            return (ModelSetting.get(key) == 'True')
+        except Exception as e:
+            logger.error('Exception:%s %s', e, key)
+            logger.error(traceback.format_exc())
+
+    @staticmethod
+    def set(key, value):
+        try:
+            item = db.session.query(ModelSetting).filter_by(key=key).with_for_update().first()
+            if item is not None:
+                item.value = value.strip()
+                db.session.commit()
+            else:
+                db.session.add(ModelSetting(key, value.strip()))
+        except Exception as e:
+            logger.error('Exception:%s %s', e, key)
+            logger.error(traceback.format_exc())
+
+    @staticmethod
+    def to_dict():
+        try:
+            from framework.util import Util
+            return Util.db_list_to_dict(db.session.query(ModelSetting).all())
+        except Exception as e:
+            logger.error('Exception:%s %s', e, key)
+            logger.error(traceback.format_exc())
+
+
+    @staticmethod
+    def setting_save(req):
+        try:
+            for key, value in req.form.items():
+                if key in ['scheduler', 'is_running']:
+                    continue
+                logger.debug('Key:%s Value:%s', key, value)
+                entity = db.session.query(ModelSetting).filter_by(key=key).with_for_update().first()
+                entity.value = value
+            db.session.commit()
+            return True                  
+        except Exception as e: 
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+            logger.debug('Error Key:%s Value:%s', key, value)
+            return False
 
 #########################################################
 
