@@ -158,7 +158,7 @@ class LogicQueue(object):
             try:
                 entity = LogicQueue.download_queue.get()
                 logger.debug('Queue receive item:%s %s', entity.manga_id, entity.wr_id)
-                LogicMD.download(entity)
+                LogicNormal.download(entity)
                 LogicQueue.download_queue.task_done()    
             except Exception as e: 
                 logger.error('Exception:%s', e)
@@ -207,7 +207,7 @@ class LogicQueue(object):
             QueueEntity.entity_list = []
             import plugin
             plugin.send_queue_list()
-            LogicMD.stop()
+            LogicNormal.stop()
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())

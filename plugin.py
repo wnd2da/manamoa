@@ -108,15 +108,7 @@ def ajax(sub):
 
 
 
-        # kthoom 에서 호출
-        elif sub == 'zip_list':
-            try:
-                ret = Logic.get_zip_list()
-                return jsonify(ret)
-            except Exception as e: 
-                logger.error('Exception:%s', e)
-                logger.error(traceback.format_exc())
-                return jsonify('fail')   
+  
         
         elif sub == 'download_by_request':
             try:

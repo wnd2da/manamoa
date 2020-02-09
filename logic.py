@@ -192,27 +192,6 @@ class Logic(object):
 
 
     @staticmethod
-    def get_zip_list():
-        try:
-            ret = []
-            download_path = ModelSetting.get('dfolder')
-            tmp = os.listdir(download_path)
-            for t in tmp:
-                title_path = os.path.join(download_path, t)
-                if os.path.isdir(title_path):
-                    zip_list = os.listdir(title_path)
-                    for z in zip_list:
-                        zip_path = os.path.join(title_path, z)
-                        if os.path.isfile(zip_path) and zip_path.endswith('.zip'):
-                            ret.append('dp/%s/%s' % (t, z))
-            #return '|'.join(ret)
-            return ret
-
-        except Exception as e:
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-
-    @staticmethod
     def item_list(req):
         try:
             ret = {}
