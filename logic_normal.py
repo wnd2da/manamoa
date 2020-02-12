@@ -49,8 +49,6 @@ import requests
 from bs4 import BeautifulSoup
 from sqlitedict import SqliteDict
 import cfscrape
-from discord_webhook import DiscordWebhook
-from google_drive_downloader import GoogleDriveDownloader as gdd
 from PIL import Image
 #############################################################################################
 
@@ -90,17 +88,6 @@ class LogicNormal(object):
     def titlereplace(title):
         return re.sub('[\\/:*?\"<>|]', '', title).strip()
 
-    @staticmethod
-    def senddiscord(sendcontent):
-        try:
-            if ModelSetting.get('discord_webhook') == 'True':
-                url = ModelSetting.get('discord_webhook_url')
-                webhook = DiscordWebhook(url=url, content=sendcontent)
-                webhook.execute()
-        except Exception as e:
-            logger.error('Exception:%s', e)
-            logger.error(traceback.format_exc())
-
 
     @staticmethod
     def image_download(url, image_filepath, decoder):
@@ -133,7 +120,6 @@ class LogicNormal(object):
                         fantasy_zip.write(src, os.path.basename(src), compress_type = zipfile.ZIP_DEFLATED)
                 fantasy_zip.close()
             shutil.rmtree(zip_path)
-            LogicNormal.senddiscord(u'{}  압축 완료'.format(os.path.basename(zip_path)))
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
@@ -302,7 +288,6 @@ class LogicNormal(object):
                     plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
 
                     
-                LogicNormal.senddiscord(u'{} 다운로드 완료'.format(title))
                 if ModelSetting.get('zip') == 'True':
                     LogicNormal.makezip(download_path)
                 queue_entity_episode.status = '완료'
