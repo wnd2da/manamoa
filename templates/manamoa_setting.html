@@ -49,21 +49,6 @@ var package_name = 'manamoa';
 var current_data = null;
 
 $(document).ready(function(){
-  use_collapse('proxy');
-  use_collapse('discord_webhook');
-  use_collapse('use_selenium', true);
-});
-
-$('#proxy').change(function() {
-  use_collapse('proxy');
-});
-
-$('#discord_webhook').change(function() {
-  use_collapse('discord_webhook');
-});
-
-$('#use_selenium').change(function() {
-  use_collapse('use_selenium', true);
 });
 
 $("body").on('click', '#go_btn', function(e){

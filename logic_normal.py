@@ -143,9 +143,10 @@ class LogicNormal(object):
     @staticmethod
     def pageparser(url):
         try:
-            if ModelSetting.get('use_selenium') == 'True':
-                from system import LogicSelenium
-                return LogicSelenium.get_pagesoruce_by_selenium(url, '//footer[@class="at-footer"]')
+            #if ModelSetting.get('use_selenium') == 'True':
+            from system import LogicSelenium
+            return LogicSelenium.get_pagesoruce_by_selenium(url, '//footer[@class="at-footer"]')
+            
             headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36"}
             if ModelSetting.get('proxy') == 'False' and ModelSetting.get('cloudflare_bypass') == 'False':
                 page_source = requests.get(url,headers=headers).text
