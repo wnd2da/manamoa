@@ -219,7 +219,7 @@ class LogicNormal(object):
         try:
             from system import SystemLogicSelenium
             if LogicNormal.driver is None:
-                LogicNormal.driver = LogicSelenium.create_driver()
+                LogicNormal.driver = SystemLogicSelenium.create_driver()
 
             driver = LogicNormal.driver
             url = '%s/bbs/board.php?bo_table=manga&wr_id=%s' % (ModelSetting.get('sitecheck'), wr_id)
