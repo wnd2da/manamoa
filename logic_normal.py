@@ -130,8 +130,8 @@ class LogicNormal(object):
     def pageparser(url):
         try:
             #if ModelSetting.get('use_selenium') == 'True':
-            from system import LogicSelenium
-            return LogicSelenium.get_pagesoruce_by_selenium(url, '//footer[@class="at-footer"]')
+            from system import SystemLogicSelenium
+            return SystemLogicSelenium.get_pagesoruce_by_selenium(url, '//footer[@class="at-footer"]')
             
             headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36"}
             if ModelSetting.get('proxy') == 'False' and ModelSetting.get('cloudflare_bypass') == 'False':
@@ -217,7 +217,7 @@ class LogicNormal(object):
         wr_id = queue_entity_episode.wr_id
         logger.debug('Episode Download wr_id:%s', wr_id)
         try:
-            from system import LogicSelenium
+            from system import SystemLogicSelenium
             if LogicNormal.driver is None:
                 LogicNormal.driver = LogicSelenium.create_driver()
 
@@ -226,7 +226,7 @@ class LogicNormal(object):
             driver.get(url)
             
             fix_tag = WebDriverWait(driver, 30).until(lambda driver: driver.find_element_by_xpath('//*[@id="thema_wrapper"]/div[3]/div/div/div[1]/div[2]/div[3]/div'))
-            LogicSelenium.remove_element(driver, fix_tag)
+            SystemLogicSelenium.remove_element(driver, fix_tag)
 
 
             tag = WebDriverWait(driver, 30).until(lambda driver: driver.find_element_by_xpath('//*[@id="thema_wrapper"]/div[3]/div/div/div[1]/div[2]/div[1]/div/div[1]/a[2]'))
@@ -266,7 +266,7 @@ class LogicNormal(object):
             queue_entity_episode.status = '캡처중'
             plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
             
-            full = LogicSelenium.full_screenshot(driver)
+            full = SystemLogicSelenium.full_screenshot(driver)
             if full is None:
                 queue_entity_episode.status = '실패'
                 plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)    
