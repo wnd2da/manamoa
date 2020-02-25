@@ -8,7 +8,7 @@ import logging
 import threading
 import Queue
 # third-party
-from selenium.webdriver.support.ui import WebDriverWait
+
 
 # sjva 공용
 from framework import db, scheduler, path_data
@@ -130,10 +130,15 @@ class LogicNormal(object):
     def pageparser(url):
         try:
             #if ModelSetting.get('use_selenium') == 'True':
-            from system import SystemLogicSelenium
-            return SystemLogicSelenium.get_pagesoruce_by_selenium(url, '//footer[@class="at-footer"]')
-            
-            headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36"}
+            #from system import SystemLogicSelenium
+            #return SystemLogicSelenium.get_pagesoruce_by_selenium(url, '//footer[@class="at-footer"]')
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36',
+                'Accept' : 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language' : 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+            } 
+            page_source = requests.get(url,headers=headers).text
+            return page_source
             if ModelSetting.get('proxy') == 'False' and ModelSetting.get('cloudflare_bypass') == 'False':
                 page_source = requests.get(url,headers=headers).text
             elif ModelSetting.get('proxy') == 'True' and ModelSetting.get('cloudflare_bypass') == 'False':
@@ -174,7 +179,8 @@ class LogicNormal(object):
                 for e in entity.episodes:
                     m = ModelManamoaItem.get(e.wr_id)
                     if m is None:
-                        if LogicNormal.episode_download(e):
+                        #if LogicNormal.episode_download(e):
+                        if LogicNormal.episode_download_old(e):
                             ModelManamoaItem.save(e)
                     else:
                         e.title = m.title
@@ -217,6 +223,7 @@ class LogicNormal(object):
         wr_id = queue_entity_episode.wr_id
         logger.debug('Episode Download wr_id:%s', wr_id)
         try:
+            from selenium.webdriver.support.ui import WebDriverWait
             from system import SystemLogicSelenium
             if LogicNormal.driver is None:
                 LogicNormal.driver = SystemLogicSelenium.create_driver()
@@ -296,6 +303,132 @@ class LogicNormal(object):
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
+
+
+
+
+    # 에피소드 한편을 다운로드 한다.  wr_id= 포함된 url, 저장경로
+    @staticmethod
+    def episode_download_old(queue_entity_episode):
+        import plugin
+        wr_id = queue_entity_episode.wr_id
+        logger.debug('Episode Download wr_id:%s', wr_id)
+        try:
+            url = '%s/bbs/board.php?bo_table=manga&wr_id=%s' % (ModelSetting.get('sitecheck'), wr_id)
+            page_source2 = LogicNormal.pageparser(url)
+            soup = BeautifulSoup(page_source2, 'html.parser')
+            mangaid = soup.find('a','btn btn-color btn-sm')['href'].replace('/bbs/page.php?hid=manga_detail&manga_id=','')
+            queue_entity_episode.manga_id = mangaid
+            mangascore = soup.find('span','count').text.replace('인기 : ','')
+            title = soup.title.text
+            queue_entity_episode.title = LogicNormal.titlereplace(title)
+            #match = re.compile(ur'(?P<main>.*?)((단행본.*?)?|특별편)?(\s(?P<sub>(\d|\-|\.)*?(화|권)))?(\s\(완결\))?\s?$').match(title)
+            #match = re.compile(ur'(?P<main>.*?)((단행본.*?)?|특별편)?(\s(?P<sub>(\d|\-|\.)*?(화|권)))?(\-)?(전|후|중)?(\s\(완결\))?\s?$').match(title)
+            match = re.compile(ur'(?P<main>.*?)((단행본.*?)?|특별편)?(\s(?P<sub>(\d|\-|\.)*?(화|권)))?(\-)?(전|후|중)?(\s?\d+(\-\d+)?화)?(\s\(완결\))?\s?$').match(title)
+       
+            
+            if match:
+                queue_entity_episode.maintitle = match.group('main').strip()
+            else:
+                match2 = re.compile(ur'(?P<main>.*?)\s시즌')
+                if match2:
+                    queue_entity_episode.maintitle = match2.group('main').strip()
+                else:
+                    queue_entity_episode.maintitle = title
+                    logger.debug('not match')
+            queue_entity_episode.maintitle = LogicNormal.titlereplace(queue_entity_episode.maintitle)
+
+            if ModelSetting.get('use_title_folder') == 'True':
+                download_path = os.path.join(ModelSetting.get('dfolder'), queue_entity_episode.maintitle, queue_entity_episode.title)
+            else:
+                download_path = os.path.join(ModelSetting.get('dfolder'), queue_entity_episode.title)
+           
+            if page_source2 is None:
+                logger.error('Source is None')
+                queue_entity_episode.status = '실패'
+                
+                return False
+            page_count = page_source2.find('var img_list = [')
+            page_count2 = page_source2.find(']', page_count)
+            mangajpglist = page_source2[page_count+16:page_count2].replace('\\','').replace('"','').split(',')
+            page_count22 = page_source2.find('var img_list1 = [')
+            page_count222 = page_source2.find(']', page_count22)
+            mangajpglist2 = page_source2[page_count22+16:page_count222].replace('\\','').replace('"','').split(',')
+            
+            tmp1 = page_source2.find('var view_cnt =')
+            tmp1 = page_source2.find('=', tmp1) + 1
+            tmp2 = page_source2.find(';', tmp1)
+            view_cnt = int(page_source2[tmp1:tmp2].strip())
+            wr_id = int(url.split('wr_id=')[1].split('&')[0])
+            logger.debug('view_cnt :%s, wr_id:%s', view_cnt, wr_id)
+            if view_cnt == 0:
+                decoder = None
+            else:
+                from .decoder import Decoder
+                decoder = Decoder(view_cnt, wr_id)
+            queue_entity_episode.status = '다운로드중'
+            queue_entity_episode.total_image_count = len(mangajpglist)
+            if not os.path.exists(download_path):
+                os.makedirs(download_path)
+            tmp = os.path.join(download_path, str(1).zfill(5)+'.jpg')
+            logger.debug(mangajpglist[0])
+
+            status_code = requests.get(mangajpglist[0]).status_code
+            replace_rule = None
+            if status_code == 200:
+                replace_rule = ''
+            else:
+                status_code = requests.get(mangajpglist[0].replace('https://', 'https://s3.')).status_code
+                if status_code == 200:
+                    replace_rule = 's3.'
+                else:
+                    status_code = requests.get(mangajpglist[0].replace('https://', 'https://img.')).status_code
+                    if status_code == 200:
+                        replace_rule = 'img.'
+            logger.debug('Replace_rule : %s', replace_rule)
+            if replace_rule is not None:
+                for idx, tt in enumerate(mangajpglist):
+                    image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.jpg')
+                    LogicNormal.image_download(tt.replace('https://', 'https://%s' % replace_rule), image_filepath, decoder)
+                    queue_entity_episode.current_image_index = idx
+                    plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
+            else:
+                if mangajpglist[0].find('img.') != -1:
+                    for idx, tt in enumerate(mangajpglist):
+                        image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.jpg')
+                        downresult = LogicNormal.image_download(tt.replace('img.','s3.'), image_filepath, decoder)
+                        if downresult != 200 and mangajpglist2[0].find('google') != -1:
+                            for idx, tt in enumerate(mangajpglist2):
+                                image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.jpg')
+                                gdd.download_file_from_google_drive(file_id=tt.replace('https://drive.google.com/uc?export=view&id=',''), dest_path=image_filepath)
+                                queue_entity_episode.current_image_index = idx
+                                plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
+                            break
+                        queue_entity_episode.current_image_index = idx
+                        plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
+                else:
+                    for idx, tt in enumerate(mangajpglist):
+                        image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.jpg')
+                        downresult = LogicNormal.image_download(tt.replace('s3.','img.'), image_filepath, decoder)
+                        if downresult != 200 and mangajpglist2[0].find('google') != -1:
+                            for idx, tt in enumerate(mangajpglist2):
+                                image_filepath = os.path.join(download_path, str(idx+1).zfill(5)+'.jpg')
+                                gdd.download_file_from_google_drive(file_id=tt.replace('https://drive.google.com/uc?export=view&id=',''), dest_path=image_filepath)
+                                queue_entity_episode.current_image_index = idx
+                                plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
+                            break
+                        queue_entity_episode.current_image_index = idx
+                        plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
+            if ModelSetting.get('zip') == 'True':
+                LogicNormal.makezip(download_path)
+            queue_entity_episode.status = '완료'
+            plugin.socketio_callback('episode', queue_entity_episode.as_dict(), encoding=False)
+            return True
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+
+
 
     # 다운여부 판단
     @staticmethod
