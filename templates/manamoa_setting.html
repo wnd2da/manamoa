@@ -24,7 +24,7 @@
 
     {{ macros.m_tab_content_start('site', false) }}
       {{ macros.setting_input_text_and_buttons('sitecheck', 'Site URL', [['go_btn', 'GO']], value=arg['sitecheck'], desc=None) }}
-      {{ macros.setting_checkbox('use_selenium', 'Selenium 사용', value=arg['use_selenium'], desc=['On : 사이트에 Cloudflare 방화벽이 적용 된 것 같으면 사용합니다.', '이 옵션을 HTML 페이지를 가져오는 방법에 관한 옵션으로 이미지 파일을 가져올때 Selenium을 사용하지 않습니다.']) }}
+      {{ macros.setting_checkbox('use_selenium', 'Selenium 사용', value=arg['use_selenium'], desc=['On : 사이트에 Cloudflare 방화벽이 적용 된 것 같으면 사용합니다.', '이 옵션은 HTML 페이지를 가져오는 방법에 관한 옵션으로 이미지 파일을 가져올때 Selenium을 사용하지 않습니다.']) }}
 
       
 
