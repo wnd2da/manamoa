@@ -129,16 +129,19 @@ class LogicNormal(object):
     @staticmethod
     def pageparser(url):
         try:
-            #if ModelSetting.get('use_selenium') == 'True':
-            #from system import SystemLogicSelenium
-            #return SystemLogicSelenium.get_pagesoruce_by_selenium(url, '//footer[@class="at-footer"]')
+            if ModelSetting.get('use_selenium') == 'True':
+                from system import SystemLogicSelenium
+                return SystemLogicSelenium.get_pagesoruce_by_selenium(url, '//footer[@class="at-footer"]')
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36',
                 'Accept' : 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
                 'Accept-Language' : 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
             } 
             page_source = requests.get(url,headers=headers).text
+            #logger.debug(page_source)
             return page_source
+
+
             if ModelSetting.get('proxy') == 'False' and ModelSetting.get('cloudflare_bypass') == 'False':
                 page_source = requests.get(url,headers=headers).text
             elif ModelSetting.get('proxy') == 'True' and ModelSetting.get('cloudflare_bypass') == 'False':
