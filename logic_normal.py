@@ -92,11 +92,18 @@ class LogicNormal(object):
     @staticmethod
     def image_download(url, image_filepath, decoder):
         try:
+            logger.debug(url)
+            #logger.debug(image_filepath)
+            #logger.debug(decoder)
+            url = url.replace('filecdn.xyz', 'cdnpull.xyz')
+
             headers = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36"}
             image_data = requests.get(url,headers=headers,stream=True)
+            data = image_data.content
+            logger.debug('size : %s' % len(data))
             if decoder is None:
                 with open(image_filepath, 'wb') as handler:
-                    handler.write(image_data.content)
+                    handler.write(data)
             else:
                 from PIL import Image
                 im = Image.open(image_data.raw)
