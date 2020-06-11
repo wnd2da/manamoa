@@ -32,7 +32,7 @@
 
     {{ macros.m_tab_content_start('auto', false) }}
       {{ macros.setting_global_scheduler_button(arg['scheduler'], arg['is_running']) }}
-      {{ macros.setting_input_int('interval', '스케쥴링 실행 주기', value=arg['interval'], min='1', placeholder='10', desc='minute 단위') }}
+      {{ macros.setting_input_text('interval', '스케쥴링 실행 정보', value=arg['interval'], col='3', desc=['Inverval(minute 단위)이나 Cron 설정']) }}
       <!-- {{ macros.setting_input_int('pagecount', '탐색 페이지수', value=arg['pagecount'], min='1', placeholder='1')}} -->
       {{ macros.setting_checkbox('auto_start', '시작시 자동실행', value=arg['auto_start'], desc='On : 시작시 자동으로 스케쥴러에 등록됩니다.') }}
       {{ macros.setting_input_textarea('downlist', '자동 다운로드 할 만화 이름', value=arg['downlist'], row='5', desc=['구분자 |', '빈칸인 경우 모두 다운로드합니다.']) }}
