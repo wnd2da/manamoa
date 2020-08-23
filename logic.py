@@ -30,7 +30,7 @@ class Logic(object):
         'auto_start' : 'False',
         'interval' : '30',
         'web_page_size' : '30',
-        "sitecheck" : "https://manamoa28.net",
+        "sitecheck" : "https://manamoa53.net",
         "all_download" : "False",
         "zip" : "True",
         "downlist" : "",
